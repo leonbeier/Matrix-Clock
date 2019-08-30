@@ -24,4 +24,4 @@ Use SDA and SCL to connect the clock.
 For the timer functionality I added a passive buzzer that is driven by the Frequency_Divider that creates a 2038Hz square wave (C7).
 
 ### Buttons
-To control the timer there are 5 inputs for buttons.
+To control the timer there are 5 inputs for buttons. I used capacitive touch buttons.
