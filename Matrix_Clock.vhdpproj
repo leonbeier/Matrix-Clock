@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<ProjectRoot xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Path />
+  <Items xsi:type="ProjectFolder">
+    <Path>Basics</Path>
+    <Items xsi:type="ProjectFileVHDP">
+      <Path>Basics\Frequency_Divider.vhdp</Path>
+    </Items>
+  </Items>
+  <Items xsi:type="ProjectFolder">
+    <Path>Extensions</Path>
+    <Items xsi:type="ProjectFileVHDP">
+      <Path>Extensions\LED_Matrix.vhdp</Path>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Path>Extensions\LED_Matrix_Text.vhdp</Path>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Path>Extensions\Real_Time_Clock.vhdp</Path>
+    </Items>
+  </Items>
+  <Items xsi:type="ProjectFolder">
+    <Path>Generated</Path>
+    <Items xsi:type="ProjectFile">
+      <Path>Generated\Frequency_Divider.vhd</Path>
+    </Items>
+    <Items xsi:type="ProjectFile">
+      <Path>Generated\I2C_Array.vhd</Path>
+    </Items>
+    <Items xsi:type="ProjectFile">
+      <Path>Generated\I2C_Master_Interface.vhd</Path>
+    </Items>
+    <Items xsi:type="ProjectFile">
+      <Path>Generated\LED_Matrix.vhd</Path>
+    </Items>
+    <Items xsi:type="ProjectFile">
+      <Path>Generated\LED_Matrix_Text.vhd</Path>
+    </Items>
+    <Items xsi:type="ProjectFile">
+      <Path>Generated\Matrix_Clock.vhd</Path>
+    </Items>
+    <Items xsi:type="ProjectFile">
+      <Path>Generated\Real_Time_Clock.vhd</Path>
+    </Items>
+    <Items xsi:type="ProjectFile">
+      <Path>Generated\SPI_Master.vhd</Path>
+    </Items>
+  </Items>
+  <Items xsi:type="ProjectFolder">
+    <Path>Interface</Path>
+    <Items xsi:type="ProjectFileVHDP">
+      <Path>Interface\I2C.vhdp</Path>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Path>Interface\I2C_Array.vhdp</Path>
+    </Items>
+    <Items xsi:type="ProjectFileVHDP">
+      <Path>Interface\SPI_Master.vhdp</Path>
+    </Items>
+  </Items>
+  <Items xsi:type="ProjectFileVHDP">
+    <Path>Matrix_Clock.vhdp</Path>
+  </Items>
+</ProjectRoot>
