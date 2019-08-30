@@ -1,0 +1,447 @@
+/*
+    Name: Matrix Clock
+    Rev: 1.0
+    Creator: Leon Beier
+    Date: 17.08.2019
+    Copyright (c) 2019 Protop Solutions UG. All right reserved.
+    
+    Permission is hereby granted, free of charge, to any person obtaining a copy of 
+    this hdl code and associated documentation files (the "HDL Code"), to deal in the 
+    HDL Code without restriction, including without limitation the rights to use, 
+    copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+    HDL Code, and to permit persons to whom the HDL Code is furnished to do so, 
+    subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the HDL Code.
+
+    THE HDL Code IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS 
+    FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+    COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN 
+    AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+    WITH THE HDL Code OR THE USE OR OTHER DEALINGS IN THE HDL Code.
+*/
+
+Main
+(
+    rst             : IN    STD_LOGIC := '1';
+    
+    --Matrix
+    Matrix_CS       : OUT   STD_LOGIC := '1';
+    Matrix_CLK      : OUT   STD_LOGIC := '0';
+    Matrix_DIN      : OUT   STD_LOGIC := '0';
+    
+    --Clock
+    SDA             : INOUT STD_LOGIC;      
+    SCL             : INOUT STD_LOGIC;    
+    
+    --Buzzer
+    Buzzer          : OUT   STD_LOGIC := '0';
+    
+    --Interface
+    Button_Up       : IN    STD_LOGIC := '0';
+    Button_Down     : IN    STD_LOGIC := '0';
+    Button_Next     : IN    STD_LOGIC := '0';
+    Button_Start    : IN    STD_LOGIC := '0';
+    Button_Reset    : IN    STD_LOGIC := '0';
+)
+{
+    SIGNAL Frequency_Divider_CLK_Out  : STD_LOGIC;
+    
+    --Matrix Signals
+    CONSTANT panels                : NATURAL := 4;
+    SIGNAL LED_Matrix_Panel_Bitmap : LED_Matrix_Array ((panels*8)-1 downto 0);
+    SIGNAL LED_Matrix_Update       : STD_LOGIC;
+    --Matrix Config Signals
+    SIGNAL LED_Matrix_Brightness   : NATURAL range 0 to 15 := 5;
+    SIGNAL LED_Matrix_Shutdown     : STD_LOGIC := '0';
+    SIGNAL LED_Matrix_Config       : STD_LOGIC;
+    
+    --Matrix Text
+    CONSTANT maxChars                  : NATURAL := 5;
+    SIGNAL LED_Matrix_Text_Text        : STD_LOGIC_VECTOR ((maxChars*8)-1 downto 0);
+    SIGNAL LED_Matrix_Text_Set_Text    : STD_LOGIC := '0';
+    SIGNAL LED_Matrix_Text_Text_Matrix : LED_Matrix_Array ((panels*8)-1 downto 0);
+    SIGNAL LED_Matrix_Text_Text_En     : STD_LOGIC;
+    
+    --Clock
+    SIGNAL Real_Time_Clock_Time_Out    : Date_Time_Type;
+    
+    SIGNAL Reset    : STD_LOGIC := '0';
+    --Reset <= NOT rst;
+    
+    NewComponent LED_Matrix 
+    (
+        CLK_Frequency => 12000000,
+        Panels        => panels,
+        Rotate_seg    => '1',
+        Mirror        => '1',
+        
+        Reset         => Reset,
+        CS_O          => Matrix_CS,
+        CLK_O         => Matrix_CLK,
+        DIN_O         => Matrix_DIN,
+        Panel_Bitmap  => LED_Matrix_Panel_Bitmap,
+        Update        => LED_Matrix_Update,
+        Brightness    => LED_Matrix_Brightness,
+        Shutdown      => LED_Matrix_Shutdown,
+        Config        => LED_Matrix_Config,
+    );
+    
+    NewComponent LED_Matrix_Text 
+    (
+        CLK_Frequency => 12000000,
+        Panels        => panels,
+        MaxChars      => maxChars,
+        ScrollSpeed   => 10,
+        
+        Reset         => Reset,
+        Text          => LED_Matrix_Text_Text,
+        Text_Length   => maxChars,
+        Set_Text      => LED_Matrix_Text_Set_Text,
+        Scroll        => '0',
+        Text_Matrix   => LED_Matrix_Text_Text_Matrix,
+        Text_En       => LED_Matrix_Text_Text_En,
+    );
+    
+    NewComponent Real_Time_Clock 
+    (
+        CLK_Frequency => 12000000,
+        
+        Reset         => Reset,
+        SDA           => SDA,
+        SCL           => SCL,
+        Config        => '0',
+        C_24h_12h     => '0',
+        Time_Out      => Real_Time_Clock_Time_Out,
+    );
+    
+    NewComponent Frequency_Divider 
+    (
+        Divider => 24531,
+        Impuls  => '0',
+        
+        CLK_Out => Frequency_Divider_CLK_Out,
+    );
+    
+    Process Clock_Controller
+    (
+        VARIABLE timer_min_10   : NATURAL range 0 to 9 := 0;
+        VARIABLE timer_min      : NATURAL range 0 to 9 := 0;
+        VARIABLE timer_sec_10   : NATURAL range 0 to 5 := 0;
+        VARIABLE timer_sec      : NATURAL range 0 to 9 := 0;
+        VARIABLE digit_select   : NATURAL range 0 to 3 := 2;
+        VARIABLE timer_set      : STD_LOGIC := '0';
+        VARIABLE timer_alarm    : STD_LOGIC := '0';
+    )
+    {
+        --Set Bitmap to time or counting timer
+        If((timer_sec = 0 AND timer_sec_10 = 0 AND timer_min = 0 AND timer_min_10 = 0 AND digit_select = 2) OR timer_set = '1')
+        {
+            LED_Matrix_Panel_Bitmap <= LED_Matrix_Text_Text_Matrix;
+            LED_Matrix_Update       <= LED_Matrix_Text_Text_En;
+        }
+        --Set one dot under the digit to edit for the timer
+        Else
+        {
+            LED_Matrix_Panel_Bitmap         <= LED_Matrix_Text_Text_Matrix;
+            If(digit_select = 3)
+            {
+                LED_Matrix_Panel_Bitmap(28)(7)  <= '1';
+            }
+            Elsif(digit_select = 2)
+            {
+                LED_Matrix_Panel_Bitmap(22)(7)  <= '1';
+            }
+            Elsif(digit_select = 1)
+            {
+                LED_Matrix_Panel_Bitmap(10)(7)  <= '1';
+            }
+            Else
+            {
+                LED_Matrix_Panel_Bitmap(4)(7)   <= '1';
+            }
+            LED_Matrix_Update               <= LED_Matrix_Text_Text_En;
+        }
+        
+        --creates the alarm
+        If(timer_alarm = '1')
+        {
+            VARIABLE alarm_count : NATURAL range 0 to 50000000 := 0;
+            If(alarm_count < 5000000)
+            {
+                --triggers the passive buzzer with a frequency for some time
+                Buzzer <= Frequency_Divider_CLK_Out;
+            }
+            Else
+            {
+                --waits a longer time without beeping
+                Buzzer <= '0';
+            }
+            
+            If(alarm_count < 50000000)
+            {
+                alarm_count := alarm_count + 1;
+            }
+            Else
+            {
+                alarm_count := 0;
+            }
+        }
+        Else
+        {
+            alarm_count := 0;
+            Buzzer      <= '0';
+        }
+        
+        --if timer isn't already counting
+        If(timer_set = '0')     --Set Timer time
+        {
+            Thread
+            {
+                --wait for up/down button pressed
+                While(Button_Up = '0' AND Button_Down = '0'){}
+                --count digit for timer up/down
+                If(Button_Up = '1')
+                {
+                    If(digit_select = 0)
+                    {
+                        If(timer_sec < 9)
+                        {
+                            timer_sec := timer_sec + 1;
+                        }
+                        Else
+                        {
+                            timer_sec := 0;
+                        }
+                    }
+                    Elsif(digit_select = 1)
+                    {
+                        If(timer_sec_10 < 5)
+                        {
+                            timer_sec_10 := timer_sec_10 + 1;
+                        }
+                        Else
+                        {
+                            timer_sec_10 := 0;
+                        }
+                    }
+                    Elsif(digit_select = 2)
+                    {
+                        If(timer_min < 9)
+                        {
+                            timer_min := timer_min + 1;
+                        }
+                        Else
+                        {
+                            timer_min := 0;
+                        }
+                    }
+                    Elsif(digit_select = 3)
+                    {
+                        If(timer_min_10 < 9)
+                        {
+                            timer_min_10 := timer_min_10 + 1;
+                        }
+                        Else
+                        {
+                            timer_min_10 := 0;
+                        }
+                    }
+                }
+                Else
+                {
+                    If(digit_select = 0)
+                    {
+                        If(timer_sec > 0)
+                        {
+                            timer_sec := timer_sec - 1;
+                        }
+                        Else
+                        {
+                            timer_sec := 9;
+                        }
+                    }
+                    Elsif(digit_select = 1)
+                    {
+                        If(timer_sec_10 > 0)
+                        {
+                            timer_sec_10 := timer_sec_10 - 1;
+                        }
+                        Else
+                        {
+                            timer_sec_10 := 5;
+                        }
+                    }
+                    Elsif(digit_select = 2)
+                    {
+                        If(timer_min > 0)
+                        {
+                            timer_min := timer_min - 1;
+                        }
+                        Else
+                        {
+                            timer_min := 9;
+                        }
+                    }
+                    Elsif(digit_select = 3)
+                    {
+                        If(timer_min_10 > 0)
+                        {
+                            timer_min_10 := timer_min_10 - 1;
+                        }
+                        Else
+                        {
+                            timer_min_10 := 9;
+                        }
+                    }
+                }
+                
+                --output new time
+                LED_Matrix_Text_Text ((5*8)-1 downto (4*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(timer_min_10+48, 8));
+                LED_Matrix_Text_Text ((4*8)-1 downto (3*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(timer_min+48, 8));
+                LED_Matrix_Text_Text ((3*8)-1 downto (2*8)) <= x"3A";
+                LED_Matrix_Text_Text ((2*8)-1 downto (1*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(timer_sec_10+48, 8));
+                LED_Matrix_Text_Text ((1*8)-1 downto 0)     <= STD_LOGIC_VECTOR(TO_UNSIGNED(timer_sec+48, 8));
+                LED_Matrix_Text_Set_Text                    <= '1';
+                
+                Step
+                {
+                    LED_Matrix_Text_Set_Text                    <= '0';
+                }
+                --debounce
+                Wait(1000000);
+                --wait for button release
+                While(Button_Up = '1' OR Button_Down = '1'){}
+                --debounce
+                Wait(1000000);
+            }
+        }
+        --Show timer couting down
+        Else
+        {
+            Thread
+            {
+                --Count down
+                If(timer_sec > 0)
+                {
+                    timer_sec       := timer_sec - 1;
+                }
+                Elsif(timer_sec_10 > 0)
+                {
+                    timer_sec       := 9;
+                    timer_sec_10    := timer_sec_10 - 1;
+                }
+                Elsif(timer_min > 0)
+                {
+                    timer_sec       := 9;
+                    timer_sec_10    := 5;
+                    timer_min       := timer_min - 1;
+                }
+                Elsif(timer_min_10 > 0)
+                {
+                    timer_sec       := 9;
+                    timer_sec_10    := 5;
+                    timer_min       := 9;
+                    timer_min_10    := timer_min_10 - 1;
+                }
+                Else
+                {
+                    timer_set       := '0';
+                    timer_alarm     := '1';
+                }
+                
+                --output new time
+                LED_Matrix_Text_Text ((5*8)-1 downto (4*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(timer_min_10+48, 8));
+                LED_Matrix_Text_Text ((4*8)-1 downto (3*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(timer_min+48, 8));
+                LED_Matrix_Text_Text ((3*8)-1 downto (2*8)) <= x"3A";
+                LED_Matrix_Text_Text ((2*8)-1 downto (1*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(timer_sec_10+48, 8));
+                LED_Matrix_Text_Text ((1*8)-1 downto 0)     <= STD_LOGIC_VECTOR(TO_UNSIGNED(timer_sec+48, 8));
+                LED_Matrix_Text_Set_Text                    <= '1';
+                
+                Step
+                {
+                    LED_Matrix_Text_Set_Text                    <= '0';
+                }
+                --Wait one second
+                Wait(50000000);
+            }
+        }
+        
+        --rotate digit to change
+        Thread
+        {
+            --wait for button pressed
+            While(Button_Next = '0'){}
+            Step
+            {
+                --change digit to edit
+                If(digit_select < 3)
+                {
+                    digit_select := digit_select + 1;
+                }
+                Else
+                {
+                    digit_select := 0;
+                }
+                
+                --update matrix (for dot)
+                LED_Matrix_Text_Set_Text                    <= '1';
+            }
+            Step
+            {
+                LED_Matrix_Text_Set_Text                    <= '0';
+            }
+            Wait(1000000);
+            While(Button_Next = '1'){}
+            Wait(1000000);
+        }
+        
+        --start counting down if start button is pressed
+        If(Button_Start = '1' AND NOT(timer_sec = 0 AND timer_sec_10 = 0 AND timer_min = 0 AND timer_min_10 = 0))
+        {
+            timer_set := '1';
+        }
+        
+        --reset everything if reset button is pressed
+        Thread
+        {
+            If(Button_Reset = '1')  --Reset if both buttons are pressed
+            {
+                timer_set       := '0';
+                timer_alarm     := '0';
+                timer_min_10    := 0;
+                timer_min       := 0;
+                timer_sec_10    := 0;
+                timer_sec       := 0;
+                digit_select    := 2;
+                Wait(1000000);
+                While(Button_Reset = '1'){}
+                Wait(1000000);
+            }
+        }
+        
+        --show time if the timer is at 00:00 and the first minute digit is selected (reset position)
+        Thread
+        {
+            Step
+            {
+                If(timer_sec = 0 AND timer_sec_10 = 0 AND timer_min = 0 AND timer_min_10 = 0 AND digit_select = 2)
+                {
+                    LED_Matrix_Text_Text ((5*8)-1 downto (4*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(Real_Time_Clock_Time_Out.Hour10+48, 8));
+                    LED_Matrix_Text_Text ((4*8)-1 downto (3*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(Real_Time_Clock_Time_Out.Hour+48, 8));
+                    LED_Matrix_Text_Text ((3*8)-1 downto (2*8)) <= x"3A";
+                    LED_Matrix_Text_Text ((2*8)-1 downto (1*8)) <= STD_LOGIC_VECTOR(TO_UNSIGNED(Real_Time_Clock_Time_Out.Minute10+48, 8));
+                    LED_Matrix_Text_Text ((1*8)-1 downto 0)     <= STD_LOGIC_VECTOR(TO_UNSIGNED(Real_Time_Clock_Time_Out.Minute+48, 8));
+                    LED_Matrix_Text_Set_Text                    <= '1';
+                }
+            }
+            Step
+            {
+                LED_Matrix_Text_Set_Text                    <= '0';
+            }
+            Wait(50000000);
+        }
+    }
+}
