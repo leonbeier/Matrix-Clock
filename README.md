@@ -1,6 +1,8 @@
 # Matrix-Clock
 This is an example project designed with the VHDPlus IDE. This project uses a 8x32 LED Dot Matrix and a real time clock to show the time and work as timer.
 
+![Matrix-Clock](Matrix_Clock_Image.jpg)
+
 This project should work as template to implement your own additional functions like an audio spectrum analyzer together with the clock functionality. To do that set LED_Matrix_Panel_Bitmap to your own matrix, like in the first lines of the Clock_Controller process.
 
 ## Software
