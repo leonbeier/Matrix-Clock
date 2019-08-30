@@ -119,7 +119,7 @@ Main
     
     NewComponent Frequency_Divider 
     (
-        Divider => 24531,
+        Divider => 5887,
         Impuls  => '0',
         
         CLK_Out => Frequency_Divider_CLK_Out,
@@ -365,7 +365,7 @@ Main
                     LED_Matrix_Text_Set_Text                    <= '0';
                 }
                 --Wait one second
-                Wait(50000000);
+                Wait(12000000);
             }
         }
         
@@ -441,7 +441,7 @@ Main
             {
                 LED_Matrix_Text_Set_Text                    <= '0';
             }
-            Wait(50000000);
+            Wait(12000000);
         }
     }
 }
