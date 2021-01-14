@@ -25,8 +25,6 @@
 
 Main
 (
-    rst             : IN    STD_LOGIC := '1';
-    
     --Matrix
     Matrix_CS       : OUT   STD_LOGIC := '1';
     Matrix_CLK      : OUT   STD_LOGIC := '0';
